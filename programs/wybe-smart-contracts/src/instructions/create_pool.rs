@@ -23,16 +23,18 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     };
 
     let cpi_program = ctx.accounts.token_program.to_account_info();
+    let token_mint_key = ctx.accounts.token_mint.key(); 
     let seeds = &[
         LiquidityPool::POOL_SEED_PREFIX.as_bytes(),
-        ctx.accounts.token_mint.key().as_ref(),
+        token_mint_key.as_ref(),
         &[ctx.bumps.pool],
     ];
     let signer_seeds = &[&seeds[..]];
 
+    let amount: u64 = 10_000_000_000u64 * 1_000_000_000u64;
     token::mint_to(
         CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds),
-        10_000_000_000_000_000_000_000, // 10 billion tokens with 9 decimals
+        amount, // 10 billion tokens with 9 decimals
     )?;
 
     Ok(())

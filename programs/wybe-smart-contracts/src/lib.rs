@@ -16,7 +16,9 @@ pub mod wybe_smart_contracts {
         instructions::init_global(ctx, fee)
     }
 
-    
+    pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
+        instructions::create_pool(ctx)
+    }
 
 
 }
