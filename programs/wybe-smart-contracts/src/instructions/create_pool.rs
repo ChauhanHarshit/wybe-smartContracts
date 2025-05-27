@@ -1,12 +1,31 @@
-use crate::state::*;
+use crate::{errors::CustomError, state::*};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{self, Mint, MintTo, Token, TokenAccount},
+    token::{self, Mint, MintTo, Token, TokenAccount}, token_interface::TokenInterface,
 };
 
 pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
+
+    let required_lamports: u64 = 5_700_000;
+    
+    let received_lamports = ctx.accounts.payer.lamports();
+    require!(
+        received_lamports >= required_lamports + Rent::get()?.minimum_balance(LiquidityPool::ACCOUNT_SIZE),
+        CustomError::InsufficientPayment
+    );
+
+    // Transfer the SOL to a treasury or keep it in PDA (optional)
+    **ctx.accounts.payer.try_borrow_mut_lamports()? -= required_lamports;
+    **ctx.accounts.treasury.try_borrow_mut_lamports()? += required_lamports;
+
+    msg!(
+        "Transferred {} lamports (≈ 0.0057 SOL) from user {} to treasury {}",
+        required_lamports,
+        ctx.accounts.payer.key(),
+        ctx.accounts.treasury.key()
+    );
 
     // Initialize the LiquidityPool account state
     pool.set_inner(LiquidityPool::new(
@@ -31,14 +50,27 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     ];
     let signer_seeds = &[&seeds[..]];
 
-    let amount: u64 = 10_000_000_000u64 * 1_000_000_000u64;
+    let total_amount: u64 = 10_000_000_000u64 * 1_000_000_000u64;
     token::mint_to(
-        CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds),
-        amount, // 10 billion tokens with 9 decimals
+        CpiContext::new_with_signer(cpi_program.clone(), cpi_accounts, signer_seeds),
+        total_amount, // 10 billion tokens with 9 decimals
+    )?;
+
+    // Transfer 1% to treasury ATA
+    let transfer_accounts = token::Transfer {
+        from: ctx.accounts.pool_token_account.to_account_info(),
+        to: ctx.accounts.treasury_token_account.to_account_info(),
+        authority: ctx.accounts.pool.to_account_info(),
+    };
+
+    token::transfer(
+        CpiContext::new_with_signer(cpi_program, transfer_accounts, signer_seeds),
+        total_amount / 100, // 1% = 100M tokens
     )?;
 
     Ok(())
 }
+
 
 
 #[derive(Accounts)]
@@ -68,6 +100,20 @@ pub struct CreateLiquidityPool<'info> {
         associated_token::authority = pool
     )]
     pub pool_token_account: Box<Account<'info, TokenAccount>>,
+
+    #[account(
+        seeds = [b"treasury"],
+        bump
+    )]
+    pub treasury: SystemAccount<'info>, // Just a PDA placeholder for ATA authority
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        associated_token::mint = token_mint,
+        associated_token::authority = treasury
+    )]
+    pub treasury_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]
     pub payer: Signer<'info>,

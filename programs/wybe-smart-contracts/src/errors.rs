@@ -49,4 +49,8 @@ pub enum CustomError {
    
     #[msg("Amount is negative")]
     NegativeNumber,
+
+    #[msg("User did not pay the required 1 USD worth of SOL")]
+    InsufficientPayment,
+
 }
