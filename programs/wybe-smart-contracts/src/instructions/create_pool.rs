@@ -50,7 +50,7 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     ];
     let signer_seeds = &[&seeds[..]];
 
-    let total_amount: u64 = 10_000_000_000u64 * 1_000_000_000u64;
+    let total_amount: u64 = 1_000_000_000u64 * 1_000_000_000u64;
     token::mint_to(
         CpiContext::new_with_signer(cpi_program.clone(), cpi_accounts, signer_seeds),
         total_amount, // 10 billion tokens with 9 decimals

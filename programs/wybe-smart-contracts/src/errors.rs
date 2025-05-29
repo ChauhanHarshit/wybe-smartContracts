@@ -2,6 +2,9 @@ use anchor_lang::prelude::*;
 
 #[error_code]
 pub enum CustomError {
+    #[msg("Overflow or underflow occured")]
+    Overflow,
+
     #[msg("Duplicate tokens are not allowed")]
     DuplicateTokenNotAllowed,
 
