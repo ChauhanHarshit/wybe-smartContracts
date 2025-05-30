@@ -3,11 +3,13 @@ use anchor_lang::prelude::*;
 
 pub fn init_global(
     ctx: Context<InitializeCurveConfiguration>,
-    fees: f64,
+    fees: u64,
 ) -> Result<()> {
     let global_config = &mut ctx.accounts.global_configuration_account;
 
-    if fees < 0_f64 || fees > 100_f64 {
+    let fees = if fees == 0 { 1 } else { fees };
+
+    if  fees > 100_u64 {
         return err!(CustomError::InvalidFee);
     }
 

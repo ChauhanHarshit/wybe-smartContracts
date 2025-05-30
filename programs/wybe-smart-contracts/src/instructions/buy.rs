@@ -9,13 +9,17 @@ pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
     let curve_config = &ctx.accounts.global_configuration_account;
 
     require!(amount > 0, CustomError::InvalidAmount);
+    require!(
+        ctx.accounts.pool_token_account.amount >= amount,
+        CustomError::InsufficientFunds
+    );
 
     // Get current step pricing
     let price = get_buy_price_for_amount(pool.total_supply, amount)?;
     let total_cost = price.checked_mul(amount).ok_or(CustomError::Overflow)?;
 
     // Apply fee if any
-    let fee_bps = (curve_config.fees * 100.0) as u64; // convert % to basis points
+    let fee_bps = (curve_config.fees * 100) as u64; // convert % to basis points
     let fee = total_cost.checked_mul(fee_bps).unwrap_or(0) / 10_000;
     let total_with_fee = total_cost.checked_add(fee).ok_or(CustomError::Overflow)?;
 
@@ -45,16 +49,16 @@ pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
     );
     token::transfer(cpi_ctx, amount)?;
 
-    pool.total_supply = pool.total_supply.checked_add(amount).ok_or(CustomError::Overflow)?;
-    pool.reserve_sol = pool.reserve_sol.checked_add(total_cost).ok_or(CustomError::Overflow)?;
+    pool.total_supply = pool.total_supply.checked_sub(amount).ok_or(CustomError::Overflow)?;
+    // pool.reserve_sol = pool.reserve_sol.checked_add(total_cost).ok_or(CustomError::Overflow)?;
 
     Ok(())
 }
 
 fn get_buy_price_for_amount(current_supply: u64, amount: u64) -> Result<u64> {
-    let step_size = 1000;
-    let base_price = 1_000_000; // 0.001 SOL
-    let price_increment = 1_000_000; // 0.001 SOL per step
+    let step_size = 1000 * 1_000_000_000;
+    let base_price = 10_000; // 0.00001 SOL
+    let price_increment = 10_000; // 0.00001 SOL per step
 
     let mut cost = 0u64;
     let mut remaining = amount;
@@ -89,7 +93,11 @@ pub struct BuyTokens<'info> {
     #[account(mut)]
     pub token_mint: Box<Account<'info, Mint>>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        associated_token::mint = token_mint,
+        associated_token::authority = pool,
+    )]
     pub pool_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(mut)]

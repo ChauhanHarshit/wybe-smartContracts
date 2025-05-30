@@ -2,7 +2,7 @@ use crate::{errors::CustomError, state::*};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{self, Mint, MintTo, Token, TokenAccount}, token_interface::TokenInterface,
+    token::{self, Mint, MintTo, Token, TokenAccount},
 };
 
 pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
@@ -38,7 +38,7 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     let cpi_accounts = MintTo {
         mint: ctx.accounts.token_mint.to_account_info(),
         to: ctx.accounts.pool_token_account.to_account_info(),
-        authority: ctx.accounts.pool.to_account_info(), // PDA is mint authority
+        authority: pool.to_account_info(), // PDA is mint authority
     };
 
     let cpi_program = ctx.accounts.token_program.to_account_info();
@@ -55,6 +55,9 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
         CpiContext::new_with_signer(cpi_program.clone(), cpi_accounts, signer_seeds),
         total_amount, // 10 billion tokens with 9 decimals
     )?;
+
+    pool.total_supply = pool.total_supply.checked_add(total_amount).ok_or(CustomError::Overflow)?;
+
 
     // Transfer 1% to treasury ATA
     let transfer_accounts = token::Transfer {

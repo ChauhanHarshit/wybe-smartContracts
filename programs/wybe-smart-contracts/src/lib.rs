@@ -12,7 +12,7 @@ declare_id!("Brh4Paf4JNBDN3NBwoNeU6LBZqM4MRx6QyTVruknTXza");
 pub mod wybe_smart_contracts {
     use super::*;
 
-    pub fn initialize(ctx: Context<InitializeCurveConfiguration>, fee: f64) -> Result<()> {
+    pub fn initialize(ctx: Context<InitializeCurveConfiguration>, fee: u64) -> Result<()> {
         instructions::init_global(ctx, fee)
     }
 
@@ -20,5 +20,12 @@ pub mod wybe_smart_contracts {
         instructions::create_pool(ctx)
     }
 
+    pub fn buy_tokens(ctx: Context<BuyTokens> , amount:u64) -> Result<()>{
+        instructions::buy_tokens(ctx, amount)
+    }
+
+    pub fn sell_tokens(ctx: Context<SellTokens> , amount : u64) -> Result<()>{
+        instructions::sell_tokens(ctx, amount)
+    }
 
 }

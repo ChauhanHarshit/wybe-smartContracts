@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 
-use crate::errors::CustomError;
+// use crate::errors::CustomError;
 
 
 #[account]
 pub struct CurveConfiguration {
-    pub fees: f64,
+    pub fees: u64,
 }
 
 impl CurveConfiguration {
@@ -14,8 +14,12 @@ impl CurveConfiguration {
     // Discriminator (8) + f64 (8)
     pub const ACCOUNT_SIZE: usize = 8 + 32 + 8;
 
-    pub fn new(fees: f64) -> Self {
-        Self { fees }
+    pub fn new(fees: u64) -> Self {
+        Self { fees  }
+    }
+
+    pub fn default() -> Self {
+        Self { fees: 1 }
     }
 }
 
