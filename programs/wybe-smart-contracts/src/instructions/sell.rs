@@ -12,7 +12,10 @@ pub fn sell_tokens(ctx: Context<SellTokens>, amount: u64) -> Result<()> {
     let total_supply = pool.total_supply;
     require!(total_supply >= amount, CustomError::InsufficientFunds);
 
-    let price = get_sell_price_for_amount(total_supply - amount, amount)?;
+    let current_supply: u64 = 990_000_000 - pool.total_supply;
+
+
+    let price = get_sell_price_for_amount(current_supply - amount, amount)?;
     let total_payout = price.checked_mul(amount).ok_or(CustomError::Overflow)?;
 
     require!(
@@ -64,37 +67,27 @@ pub struct SellTokens<'info> {
 
 
 fn get_sell_price_for_amount(supply_after: u64, amount: u64) -> Result<u64> {
-    let step_size = 1000;
-    let base_price = 1_000_000;       // 0.001 SOL
-    let price_increment = 1_000_000;  // 0.001 SOL per step
+    let step_size = 1_000;
+    let base_price = 1_000;       // 0.000001 SOL
+    let price_increment = 10_000; // 0.00001 SOL per step
 
-    let end_supply = supply_after + amount - 1;
-    let start_step = end_supply / step_size;
-    let end_step = supply_after / step_size;
-
-    if start_step == end_step {
-        let price = base_price + start_step * price_increment;
-        return Ok(price);
-    }
-
-    let mut total_cost: u128 = 0;
+    let mut total_revenue: u128 = 0;
     let mut remaining = amount;
-    let mut step = start_step;
     let mut current_supply = supply_after + amount;
 
     while remaining > 0 {
-        let step_start_supply = (step * step_size).max(supply_after);
-        let tokens_in_step = current_supply - step_start_supply;
+        let step = (current_supply - 1) / step_size;
+        let step_price = base_price + step * price_increment;
 
-        let price = base_price + step * price_increment;
-        total_cost += tokens_in_step as u128 * price as u128;
+        let step_start = step * step_size;
+        let tokens_in_this_step = (current_supply - step_start).min(remaining);
 
-        remaining -= tokens_in_step;
-        current_supply -= tokens_in_step;
-        if step == 0 { break; } // Prevent underflow
-        step -= 1;
+        total_revenue += tokens_in_this_step as u128 * step_price as u128;
+
+        remaining -= tokens_in_this_step;
+        current_supply -= tokens_in_this_step;
     }
 
-    let avg_price = total_cost / amount as u128;
+    let avg_price = total_revenue / amount as u128;
     Ok(avg_price as u64)
 }

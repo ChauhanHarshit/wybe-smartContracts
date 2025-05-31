@@ -14,8 +14,9 @@ pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
         CustomError::InsufficientFunds
     );
 
+    let current_supply: u64 = 990_000_000 - pool.total_supply;
     // Get current step pricing
-    let price = get_buy_price_for_amount(pool.total_supply, amount)?;
+    let price = get_buy_price_for_amount(current_supply, amount)?;
     let total_cost = price.checked_mul(amount).ok_or(CustomError::Overflow)?;
 
     // Apply fee if any
@@ -56,27 +57,30 @@ pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
 }
 
 fn get_buy_price_for_amount(current_supply: u64, amount: u64) -> Result<u64> {
-    let step_size = 1000 * 1_000_000_000;
-    let base_price = 10_000; // 0.00001 SOL
-    let price_increment = 10_000; // 0.00001 SOL per step
+    let step_size = 1000;
+    let base_price = 1000;         // 0.000001 SOL in lamports
+    let price_increment = 10_000;  // 0.00001 SOL in lamports
 
-    let mut cost = 0u64;
+    let mut cost: u128 = 0;
     let mut remaining = amount;
     let mut supply = current_supply;
 
     while remaining > 0 {
         let step = supply / step_size;
         let step_price = base_price + step * price_increment;
+
         let next_step_at = (step + 1) * step_size;
         let tokens_in_this_step = (next_step_at - supply).min(remaining);
 
-        cost = cost.checked_add(step_price * tokens_in_this_step).ok_or(CustomError::Overflow)?;
+        cost = cost
+            .checked_add(step_price as u128 * tokens_in_this_step as u128)
+            .ok_or(CustomError::Overflow)?;
 
         remaining -= tokens_in_this_step;
         supply += tokens_in_this_step;
     }
 
-    Ok(cost / amount) // average price per token
+    Ok((cost / amount as u128) as u64)
 }
 
 #[derive(Accounts)]

@@ -1,0 +1,4 @@
+const LAMPORTS_PER_SOL: u64 = 1_000_000_000;
+const SECONDS_PER_DAY: u64 = 86_400;
+
+
