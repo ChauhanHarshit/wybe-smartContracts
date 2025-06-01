@@ -19,7 +19,7 @@ impl CurveConfiguration {
     }
 
     pub fn default() -> Self {
-        Self { fees: 1 }
+        Self { fees: 2 }
     }
 }
 

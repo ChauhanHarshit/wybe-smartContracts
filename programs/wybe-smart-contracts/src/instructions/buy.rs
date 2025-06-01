@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
-use crate::state::*;
 use crate::errors::CustomError;
+use crate::state::*;
 
 pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
@@ -14,7 +14,7 @@ pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
         CustomError::InsufficientFunds
     );
 
-    let current_supply: u64 = 990_000_000 - pool.total_supply;
+    let current_supply: u64 = (990_000_000 * 1_000_000_000) - pool.total_supply;
     // Get current step pricing
     let price = get_buy_price_for_amount(current_supply, amount)?;
     let total_cost = price.checked_mul(amount).ok_or(CustomError::Overflow)?;
@@ -44,13 +44,16 @@ pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
             from: ctx.accounts.pool_token_account.to_account_info(),
             to: ctx.accounts.user_token_account.to_account_info(),
             // authority: ctx.accounts.pool.to_account_info(),
-            authority : authority_info,
+            authority: authority_info,
         },
         signer,
     );
     token::transfer(cpi_ctx, amount)?;
 
-    pool.total_supply = pool.total_supply.checked_sub(amount).ok_or(CustomError::Overflow)?;
+    pool.total_supply = pool
+        .total_supply
+        .checked_sub(amount)
+        .ok_or(CustomError::Overflow)?;
     // pool.reserve_sol = pool.reserve_sol.checked_add(total_cost).ok_or(CustomError::Overflow)?;
 
     Ok(())
@@ -58,8 +61,8 @@ pub fn buy_tokens(ctx: Context<BuyTokens>, amount: u64) -> Result<()> {
 
 fn get_buy_price_for_amount(current_supply: u64, amount: u64) -> Result<u64> {
     let step_size = 1000;
-    let base_price = 1000;         // 0.000001 SOL in lamports
-    let price_increment = 10_000;  // 0.00001 SOL in lamports
+    let base_price = 1000; // 0.000001 SOL in lamports
+    let price_increment = 10_000; // 0.00001 SOL in lamports
 
     let mut cost: u128 = 0;
     let mut remaining = amount;
@@ -111,4 +114,4 @@ pub struct BuyTokens<'info> {
     pub treasury: SystemAccount<'info>,
 
     pub token_program: Program<'info, Token>,
-} 
+}

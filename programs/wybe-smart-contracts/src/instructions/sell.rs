@@ -1,7 +1,7 @@
+use crate::errors::CustomError;
+use crate::state::*;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Burn, Token, TokenAccount};
-use crate::state::*;
-use crate::errors::CustomError;
 
 pub fn sell_tokens(ctx: Context<SellTokens>, amount: u64) -> Result<()> {
     let pool = &mut ctx.accounts.pool;
@@ -9,11 +9,8 @@ pub fn sell_tokens(ctx: Context<SellTokens>, amount: u64) -> Result<()> {
     require!(amount > 0, CustomError::InvalidAmount);
     require!(pool.reserve_sol > 0, CustomError::InsufficientFunds);
 
-    let total_supply = pool.total_supply;
-    require!(total_supply >= amount, CustomError::InsufficientFunds);
-
-    let current_supply: u64 = 990_000_000 - pool.total_supply;
-
+    let current_supply: u64 = (990_000_000 * 1_000_000_000) - pool.total_supply;
+    require!(current_supply >= amount, CustomError::InsufficientFunds);
 
     let price = get_sell_price_for_amount(current_supply - amount, amount)?;
     let total_payout = price.checked_mul(amount).ok_or(CustomError::Overflow)?;
@@ -39,8 +36,11 @@ pub fn sell_tokens(ctx: Context<SellTokens>, amount: u64) -> Result<()> {
     **ctx.accounts.user.try_borrow_mut_lamports()? += total_payout;
 
     // Update pool state
-    pool.total_supply = pool.total_supply.checked_sub(amount).ok_or(CustomError::Overflow)?;
-    pool.reserve_sol = pool.reserve_sol.checked_sub(total_payout).ok_or(CustomError::Overflow)?;
+    pool.total_supply = pool
+        .total_supply
+        .checked_add(amount)
+        .ok_or(CustomError::Overflow)?;
+    // pool.reserve_sol = pool.reserve_sol.checked_sub(total_payout).ok_or(CustomError::Overflow)?;
 
     Ok(())
 }
@@ -65,10 +65,9 @@ pub struct SellTokens<'info> {
     pub token_program: Program<'info, Token>,
 }
 
-
 fn get_sell_price_for_amount(supply_after: u64, amount: u64) -> Result<u64> {
     let step_size = 1_000;
-    let base_price = 1_000;       // 0.000001 SOL
+    let base_price = 1_000; // 0.000001 SOL
     let price_increment = 10_000; // 0.00001 SOL per step
 
     let mut total_revenue: u128 = 0;

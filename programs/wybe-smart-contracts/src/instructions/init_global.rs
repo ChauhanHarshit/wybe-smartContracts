@@ -7,7 +7,7 @@ pub fn init_global(
 ) -> Result<()> {
     let global_config = &mut ctx.accounts.global_configuration_account;
 
-    let fees = if fees == 0 { 1 } else { fees };
+    let fees = if fees == 0 { 2 } else { fees };
 
     if  fees > 100_u64 {
         return err!(CustomError::InvalidFee);
