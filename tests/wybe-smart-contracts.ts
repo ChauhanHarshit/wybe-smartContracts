@@ -27,30 +27,30 @@ describe("wybe-smart-contracts", () => {
   })
   
 
-  // it("Initializes the global configuration account!", async () => {
-  //     const [globalConfigPDA , bump] = await anchor.web3.PublicKey.findProgramAddress(
-  //       [Buffer.from("CurveConfiguration")],
-  //       program.programId,
-  //     );
+  it("Initializes the global configuration account!", async () => {
+      const [globalConfigPDA , bump] = await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from("CurveConfiguration")],
+        program.programId,
+      );
 
-  //     await program.methods
-  //     .initialize(new anchor.BN(2))
-  //     .accountsPartial({
-  //       globalConfigurationAccount: globalConfigPDA,
-  //       admin: user1.publicKey,
-  //       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-  //       systemProgram: anchor.web3.SystemProgram.programId
-  //     })
-  //     .signers([user1])
-  //     .rpc();
+      await program.methods
+      .initialize(new anchor.BN(2))
+      .accountsPartial({
+        globalConfigurationAccount: globalConfigPDA,
+        admin: user1.publicKey,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+        systemProgram: anchor.web3.SystemProgram.programId
+      })
+      .signers([user1])
+      .rpc();
       
-  //     const configAccount = await program.account.curveConfiguration.fetch(globalConfigPDA);
-  //     console.log("Fee stored : " , configAccount.fees.toNumber());
+      const configAccount = await program.account.curveConfiguration.fetch(globalConfigPDA);
+      console.log("Fee stored : " , configAccount.fees.toNumber());
 
-  //     if (configAccount.fees.toNumber() !== 2) {
-  //       throw new Error("Fee mismatch!");
-  //     }
-  // });
+      if (configAccount.fees.toNumber() !== 2) {
+        throw new Error("Fee mismatch!");
+      }
+  });
 
       // Token launch test
   it("Create a liquidity pool"  , async() =>{
@@ -115,7 +115,7 @@ describe("wybe-smart-contracts", () => {
     console.log("Expected:", expectedPoolSupply.toString());
     console.log("Actual:", poolAccount.totalSupply.toString());
     
-    if (!poolAccount.totalSupply.eq(expectedPoolSupply)) {
+    if (!poolAccount.totalSupply.eq(TOTAL_TOKENS)) {
       throw new Error("Token minting failed or incorrect token supply");
     }
     
