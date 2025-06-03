@@ -1,5 +1,5 @@
 use crate::{errors::CustomError, state::*};
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program::{program::invoke, system_instruction}, system_program::{transfer, Transfer}};
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, Mint, MintTo, Token, TokenAccount},
@@ -17,8 +17,22 @@ pub fn create_pool(ctx: Context<CreateLiquidityPool>) -> Result<()> {
     );
 
     // Transfer the SOL to a treasury or keep it in PDA (optional)
-    **ctx.accounts.payer.try_borrow_mut_lamports()? -= required_lamports;
-    **ctx.accounts.treasury.try_borrow_mut_lamports()? += required_lamports;
+    // **ctx.accounts.payer.try_borrow_mut_lamports()? -= required_lamports;
+    // **ctx.accounts.treasury.try_borrow_mut_lamports()? += required_lamports;
+
+    let ix = system_instruction::transfer(
+        &ctx.accounts.payer.key(),
+         &ctx.accounts.treasury.key(),
+          required_lamports
+        );
+
+    invoke(
+        &ix,
+        &[
+            ctx.accounts.payer.to_account_info(),
+            ctx.accounts.treasury.to_account_info()
+        ],
+    )?;  
 
     msg!(
         "Transferred {} lamports (≈ 0.0057 SOL) from user {} to treasury {}",
@@ -105,10 +119,14 @@ pub struct CreateLiquidityPool<'info> {
     pub pool_token_account: Box<Account<'info, TokenAccount>>,
 
     #[account(
+        init,
+        payer = payer,
+        space = 8,
         seeds = [b"treasury"],
         bump
     )]
-    pub treasury: SystemAccount<'info>, // Just a PDA placeholder for ATA authority
+    /// CHECK: This is a safe account to deposit Sol
+    pub treasury: UncheckedAccount<'info >,
 
     #[account(
         init_if_needed,
@@ -124,5 +142,17 @@ pub struct CreateLiquidityPool<'info> {
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub rent: Sysvar<'info, Rent>,
+    pub system_program: Program<'info, System>,
+}
+
+
+#[derive(Accounts)]
+pub struct TransferSol<'info> {
+    #[account(mut, signer)]
+     /// CHECK: This is valid payer
+    pub payer: AccountInfo<'info>, // user's wallet
+    #[account(mut)]
+    /// CHECK: This is a safe account to deposit Sol
+    pub treasury: UncheckedAccount<'info>, // your PDA
     pub system_program: Program<'info, System>,
 }
